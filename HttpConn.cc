@@ -3,6 +3,7 @@
 
 namespace httpServer
 {
+    const char* HttpConn::SrcDir_;
     std::atomic<int> HttpConn::UserCount;
     std::string FilePath;
 
@@ -103,6 +104,26 @@ namespace httpServer
         // TODO: 初始化request 读取rBuffer解析request 
         // TODO: 构造response到wBuffer
         if(rBuffer_.ReadableBytes() == 0 ){ return false; }
+        req_.Init();
+        if(req_.Parse(rBuffer_)){
+            rsp_.InitResponse(SrcDir_, req_.Path(), req_.IsKeepAlive(), 200);
+        }
+        else{
+            rsp_.InitResponse(SrcDir_, req_.Path(), false, 400);
+        }
+        rsp_.MakeResponse(wBuffer_);
+        /* 响应头 */
+        Iov_[0].iov_base = const_cast<char*>(wBuffer_.Peek());
+        Iov_[0].iov_len = wBuffer_.ReadableBytes();
+        IovCnt_ = 1;
+
+        /* 文件 */
+        if(rsp_.FileLen() > 0  && rsp_.File()) {
+            Iov_[1].iov_base = rsp_.File();
+            Iov_[1].iov_len = rsp_.FileLen();
+            IovCnt_ = 2;
+        }
+        return true;
     }
 
 

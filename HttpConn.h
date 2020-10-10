@@ -31,7 +31,7 @@ namespace httpServer
         struct sockaddr_in GetAddr() const;
 
     public:
-
+        static const char* SrcDir_;
         static std::atomic<int> UserCount;
         static std::string FilePath;
     

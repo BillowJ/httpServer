@@ -19,11 +19,19 @@ namespace httpServer
 
         void InitResponse(const string&, string&, bool, int);
         void MakeResponse(Buffer&);
-     private:
-        void UnmapFile();
+        char* File() { return mmFile_; }
+        size_t FileLen() const { return mmFileStat_.st_size; }
 
      private:
-        
+        void UnmapFile();
+        void AddStatusLine(Buffer&);
+        void AddHeader(Buffer&);
+        void AddContent(Buffer&);
+        void ErrorHtml();
+        void ErrorContent(Buffer& buff, string);
+        string GetFileType();
+
+     private:
         int code_;
         std::string Path_;              // 文件相对路径
         std::string SrcDir_;            // 文件绝对路径
