@@ -3,6 +3,9 @@
 
 #include <vector>
 #include <sys/epoll.h>
+#include <stdio.h>
+#include <cassert>
+#include <unistd.h>
 
 namespace httpServer{
 
@@ -10,20 +13,22 @@ const int MaxEvent = 1024;
 
 class Epoller{
 public:
-    static void Epoll_Init(int, int);
-    static size_t Epoll_Wait(int ListenFd, int MaxEvents, int TimeOut);
-    static void Epoll_Acception(int ListenFd, int EpollFd);
+    explicit Epoller(int maxEvent = MaxEvent);
+    ~Epoller();
+
+    void Epoll_Init(int maxEvent, int listenNum);
+    size_t Epoll_Wait(int ListenFd, int MaxEvents, int TimeOut);
     
-    static std::vector<epoll_event*> Epoll_EventsHandler(int, size_t, std::vector<epoll_event>&);
+    int GetFd(size_t);
+    uint32_t GetEvent(size_t);
     
-    static bool RemFd();
-    static bool AddFd();
-    static bool ModFd();
+    bool RemFd(int Fd);
+    bool AddFd(int Fd, uint32_t Event);
+    bool ModFd(int Fd, uint32_t Event);
 
 private:
-    static int EpollFd_;
-    static const size_t MaxEvent_;
-    static std::vector<epoll_event> events_;
+    int EpollFd_;
+    std::vector<epoll_event> Events_;
 };
 
 } // namepsace httpServer
