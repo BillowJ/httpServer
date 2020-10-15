@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <cassert>
 
 using std::function;
 
@@ -19,14 +20,7 @@ namespace httpServer
 
     class ThreadPool{
     private:
-        typedef std::function<void()> ThreadTask;
 
-        // struct ThreadTask
-        // {
-        //     function<void(void*)> CallBackFunc;
-        //     void* Args;
-        // };
-        
         /* POSIX Thread Library */
         static pthread_mutex_t Mutex_;
         static pthread_cond_t Cv_;
@@ -35,17 +29,22 @@ namespace httpServer
         // static std::mutex Mutex_;
         // static std::condition_variable Cv_;
         
-
+        static bool ShutDownButton;
         static std::vector<pthread_t> threads_;
-        static std::queue<ThreadTask> tasks_;
-        static size_t threadNum;
+        static std::queue<function<void()>> tasks_;
+        static size_t ThreadNum_;
         
-    public:
-        static int ThreadPool_Create(size_t threadNum = 3, size_t taskNum = 5);
-        static int ThreadPool_AddTask(std::function<void(void*)> Func, void* Arg);
-        static int ThreadPool_Destroy();
+    private:
 
         static void* ThreadPool_WorkerFunc(void*);
+    
+    public:
+         
+        template<class T>
+        static void ThreadPool_AddTask(T&& Func);    
+        
+        static int  ThreadPool_Destroy();
+        static bool ThreadPool_Create(size_t threadNum = 3);
     };
 
 } // namespace httpServer
