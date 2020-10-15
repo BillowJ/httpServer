@@ -17,7 +17,7 @@ public:
     ~Epoller();
 
     void Epoll_Init(int maxEvent, int listenNum);
-    size_t Epoll_Wait(int ListenFd, int MaxEvents, int TimeOut);
+    size_t Epoll_Wait(int TimeOut);
     
     int GetFd(size_t);
     uint32_t GetEvent(size_t);

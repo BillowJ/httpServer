@@ -23,7 +23,7 @@ namespace httpServer
         Events_.resize(maxEvent);
     }
 
-    size_t Epoller::Epoll_Wait(int ListenFd, int MaxEvent, int TimeOut){
+    size_t Epoller::Epoll_Wait(int TimeOut){
         int count_ = epoll_wait(EpollFd_, &Events_[0], static_cast<int>(Events_.size()), TimeOut);
         if(count_ < 0) { perror("Epoll_Wait Faild\n"); }
         return count_;
