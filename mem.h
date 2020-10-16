@@ -1,47 +1,43 @@
-#pragma once
+#ifndef MEM_H
+#define MEM_H
+
+#include "Mmalloc.h"
 #include <iostream>
 #include <exception>
 #include <string>
 
 using std::cout;
 using std::endl;
-
-//全局new重载
+using namespace global;
 void *operator new(std::size_t size)
 {
-	cout << "全局new重载" << endl;
-	void *mem = malloc(size);
-	if (mem) return mem;
-	else throw std::bad_alloc();
+	void *mem = tcmalloc::Mmalloc(size);
+	if(mem) return mem;
+    else return (void*)(0);
 }
 
 //全局new[]重载
 void *operator new[](std::size_t size)
 {
-	cout << "全局new[]重载" << endl;
-	void *mem = malloc(size);
-	if (mem)
-		return mem;
-	else
-		throw std::bad_alloc();
+	return operator new(size);
 }
 
 //全局delete重载
 void operator delete(void *ptr)
 {
-	cout << "全局delete重载" << endl;
 	if (ptr)
 	{
-		free(ptr);
+		tcmalloc::Mfree(ptr);
 	}
 }
 
 //全局delete[]重载
 void operator delete[](void *ptr)
 {
-	cout << "全局delete[]重载" << endl;
 	if (ptr)
 	{
-		free(ptr);
+		operator delete(ptr);
 	}
 }
+
+#endif
