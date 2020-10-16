@@ -3,8 +3,8 @@
 using namespace httpServer;
 
 const std::unordered_set<std::string> HttpRequest::DEFAULT_HTML{
-            "/index", "/register", "/login",
-             "/welcome", "/video", "/picture", };
+            "/index", 
+            "/hah",  };
 
 
 void HttpRequest::Init(){
@@ -86,7 +86,7 @@ void HttpRequest::ParsePath(){
     else{
         for(auto& item : DEFAULT_HTML){
             if(item == Path_){
-                Path_ += ".html";
+                Path_ = Path_ + ".html";
                 return;
             }
         }

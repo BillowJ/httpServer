@@ -33,7 +33,6 @@ const std::unordered_map<int, string> httpServer::HttpResponse::CODE_STATUS({
 });
 
 const std::unordered_map<int, string> httpServer::HttpResponse::CODE_PATH = {
-    {200, "/index.html"},
     {400, "/400.html"},
     {403, "/403.html"},
     {404, "/404.html"}
