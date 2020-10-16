@@ -1,7 +1,7 @@
 
-#include "mem.h"
-
+#include "Server.h"
 
 int main(){
-    return 0;
+    httpServer::Server s(8081, 5);
+    s.Start();
 }

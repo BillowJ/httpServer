@@ -18,12 +18,14 @@ namespace httpServer
         isClose = false;
     }
     HttpConn::~HttpConn() {
-        Close();
+        this -> Close();
     }
 
     void HttpConn::Init(int fd, const sockaddr_in& addr){
         assert(fd > 0);
         UserCount++;
+        fd_ = fd;
+        addr_ = addr;
         wBuffer_.RetrieveAll();
         rBuffer_.RetrieveAll();
         isClose = false;
@@ -31,6 +33,7 @@ namespace httpServer
 
     void HttpConn::Close(){
         // TODO: response 解除请求文件映射
+        rsp_.UnmapFile();
         if(isClose == false){
             isClose = true;
             UserCount--;
@@ -67,7 +70,7 @@ namespace httpServer
             }
             if(Iov_[0].iov_len + Iov_[1].iov_len == 0) break;
             else if(static_cast<size_t>(len) > Iov_[0].iov_len){
-                Iov_[1].iov_base = (void*)Iov_[1].iov_base + (len - Iov_[0].iov_len);
+                Iov_[1].iov_base = (uint8_t*)Iov_[1].iov_base + (len - Iov_[0].iov_len);
                 Iov_[1].iov_len -= (len - Iov_[0].iov_len);
                 if(Iov_[0].iov_len){
                     wBuffer_.RetrieveAll();
@@ -76,7 +79,7 @@ namespace httpServer
             }
             else{
                 Iov_[0].iov_len -= len;
-                Iov_[0].iov_base = (void*)Iov_[0].iov_base + len;
+                Iov_[0].iov_base = (uint8_t*)Iov_[0].iov_base + len;
                 wBuffer_.Retrieve(len);
             }
             

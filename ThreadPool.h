@@ -1,3 +1,6 @@
+#ifndef THREADPOOL_H_
+#define THREADPOOL_H_
+
 #include <pthread.h>
 #include <vector>
 #include <queue>
@@ -17,7 +20,7 @@ namespace httpServer
         void* arg;
     };
     */
-
+    class HttpConn;
     class ThreadPool{
     private:
 
@@ -40,11 +43,15 @@ namespace httpServer
     
     public:
          
-        template<class T>
-        static void ThreadPool_AddTask(T&& Func);    
-        
+        // template<class T>
+        // static void ThreadPool_AddTask(T&& Func);
+
+        static void ThreadPool_AddTask(std::function<void()>);
+
         static int  ThreadPool_Destroy();
         static bool ThreadPool_Create(size_t threadNum = 3);
     };
 
 } // namespace httpServer
+
+#endif

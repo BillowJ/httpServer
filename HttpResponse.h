@@ -1,5 +1,5 @@
 #ifndef HTTPRESPONSE_H_
-#define HTTPRESPONSE_H_H
+#define HTTPRESPONSE_H_
 
 #include "Buffer.h"
 #include <unistd.h>
@@ -17,13 +17,14 @@ namespace httpServer
         HttpResponse();
         ~HttpResponse();
 
+        void UnmapFile();
         void InitResponse(const string&, string&, bool, int);
         void MakeResponse(Buffer&);
         char* File() { return mmFile_; }
         size_t FileLen() const { return mmFileStat_.st_size; }
 
      private:
-        void UnmapFile();
+        
         void AddStatusLine(Buffer&);
         void AddHeader(Buffer&);
         void AddContent(Buffer&);

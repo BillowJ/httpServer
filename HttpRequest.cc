@@ -48,8 +48,8 @@ bool HttpRequest::Parse(Buffer& buff){
             break;
         }
     }
-    
-
+    // success
+    return true;
 }
 
 bool HttpRequest::ParseRequestLine(const std::string& str){
@@ -86,7 +86,7 @@ void HttpRequest::ParsePath(){
     else{
         for(auto& item : DEFAULT_HTML){
             if(item == Path_){
-                Path_ += '.html';
+                Path_ += ".html";
                 return;
             }
         }

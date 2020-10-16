@@ -10,7 +10,7 @@ namespace httpServer
      public:
         static const size_t KInitalSize = 1024;
 
-        explicit Buffer(int InitBufferSize = KInitalSize) 
+        explicit Buffer(size_t InitBufferSize = KInitalSize) 
         : buffer_(KInitalSize), 
           readIndex_(0),
           writeIndex_(0)

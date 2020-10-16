@@ -4,7 +4,7 @@
 namespace httpServer
 {
     Server::Server(int Port, int ThreadNum) : ListenPort_(Port), isStart_(true), 
-    Epoller_(new Epoller){
+    Epoller_(new Epoller()){
             SrcDir_ = getcwd(nullptr, 256);
             assert(SrcDir_);
             strncat(SrcDir_, "/Base/", 26);
@@ -12,7 +12,7 @@ namespace httpServer
             HttpConn::SrcDir_ = SrcDir_;
             ThreadPool::ThreadPool_Create(ThreadNum);
             InitEvenMode();
-            if(!InitSocket()) { isStart_ = false;}
+            if(!InitSocket()) { printf("error!\n"); isStart_ = false;}
         }
 
     Server::~Server(){
@@ -34,10 +34,12 @@ namespace httpServer
                 int fd = Epoller_ -> GetFd(idx);
                 uint32_t event = Epoller_ -> GetEvent(idx);
                 if(fd == ListenFd_){
+                    printf("HandleListen");
                     HandleListen();
                 }
                 else if(event & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)){
                     // TODO : close the conn
+                    CloseConn(&Users_[fd]);
                 }
                 else if(event & EPOLLIN){
                     HandleRead(&Users_[fd]);
@@ -84,24 +86,37 @@ namespace httpServer
         }
 
         ListenFd_ = socket(AF_INET, SOCK_STREAM, 0);
-        if(ListenFd_ < 0) {
-            return Close();
+        if(ListenFd_ < 0) 
+        {
+            return false;
         }
 
         int ret = setsockopt(ListenFd_, SOL_SOCKET, SO_LINGER, &optLinger, sizeof(optLinger));
-        if(ret < 0) {
-            return Close();
+        if(ret < 0) 
+        {
+            close(ListenFd_);
+            return false;
         }
         
         int optval = 1;
         ret = setsockopt(ListenFd_, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval, sizeof(int));
-        if(ret < 0) { return Close(); }
+        if(ret < 0) 
+        {
+            close(ListenFd_);
+            return false;
+        }
         
         ret = bind(ListenFd_, (struct sockaddr*)&addr, sizeof(addr));
-        if(ret< 0) { return Close(); }
+        if(ret< 0) 
+        {
+            close(ListenFd_);
+            return false;    
+        }
         
-        if((listen(ListenFd_, 6)) < 0){
-            return Close();
+        if((listen(ListenFd_, 6)) < 0)
+        {
+            close(ListenFd_);
+            return false;
         }
 
         ret = Epoller_ -> AddFd(ListenFd_, listenEvent_ | EPOLLIN);
@@ -115,7 +130,7 @@ namespace httpServer
         assert(fd > 0);
         int ret = send(fd, info, strlen(info), 0);
         if(ret < 0) {
-            perror("send error to client[%d] error!", fd);
+            printf("send error to client[%d] error!", fd);
         }
         close(fd);
     }
@@ -124,23 +139,25 @@ namespace httpServer
         assert(fd > 0);
         Users_[fd].Init(fd, addr);
         // TODO : add timer
-        Epoller_ -> AddFd(fd, EPOLLIN | connEvent_);
         ::SetNonBlocking(fd);
+        Epoller_ -> AddFd(fd, (EPOLLIN | connEvent_));
     }
 
     void Server::HandleListen(){
 
         struct sockaddr_in addr;
         socklen_t addrLen = sizeof(addr);
-        int clientFd;
-        while(clientFd = accept(ListenFd_, (sockaddr*)&addr, &addrLen) > 0){
-            if(clientFd <= 0) { return; }
+        // int clientFd;
+        do{
+            int clientFd = accept(ListenFd_, (sockaddr*)&addr, &addrLen);
+            if(clientFd <= 0) return;
             else if(HttpConn::UserCount >= MaxFd_){
                 SendError(clientFd, "Server busy!");
                 return;
             }
+
             AddClient(clientFd, addr);
-        }
+        } while(listenEvent_ & EPOLLET);
     }
 
     void Server::HandleRead(HttpConn* client){
@@ -161,10 +178,10 @@ namespace httpServer
     }
 
     void Server::OnRead(HttpConn* client){
-        int errno;
+        int Errno;
         int ret;
-        ret = client -> read(&errno);
-        if(ret <= 0 && errno != EAGAIN){
+        ret = client -> read(&Errno);
+        if(ret <= 0 && Errno != EAGAIN){
             CloseConn(client);
             return;
         }
@@ -172,11 +189,31 @@ namespace httpServer
     }
     
     void Server::OnWrite(HttpConn* client){
-
+        int Errno;
+        int ret = client ->write(&Errno);
+        if(client ->WaitToWrite() == 0){
+            if(client ->isKeepAlive()){
+                OnProcess(client);
+            }
+        }
+        else if(ret < 0){
+            if(Errno == EAGAIN){
+                Epoller_ ->ModFd(client->GetFd(), connEvent_ | EPOLLOUT);
+                return;
+            }
+        }
+        CloseConn(client);
     }
 
-    void Server::OnProcess(HttpConn* clien){
-
+    void Server::OnProcess(HttpConn* client){
+        if(client -> Process()){
+            //write
+            Epoller_ ->ModFd(client -> GetFd(), connEvent_ | EPOLLOUT);
+        }
+        // keep-alive
+        else{
+            Epoller_ ->ModFd(client -> GetFd(), connEvent_ | EPOLLIN);
+        }
     }
 
 

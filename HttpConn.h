@@ -1,5 +1,5 @@
-#ifndef REQUEST_H_
-#define REQUEST_H_
+#ifndef HTTPCONN_H_
+#define HTTPCONN_H_
 #include <string>
 #include <unistd.h> //close
 #include <arpa/inet.h>
@@ -14,7 +14,7 @@ namespace httpServer
     public:
         HttpConn();
         HttpConn(int fd, const struct sockaddr_in& addr);
-        ~HttpConn() = default;
+        ~HttpConn();
 
         void Init(int fd, const sockaddr_in& addr);
         void Close();

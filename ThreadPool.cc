@@ -14,11 +14,11 @@ namespace httpServer{
     bool ThreadPool::ThreadPool_Create(size_t threadNum){
         do{
             if(threadNum > 12 || threadNum < 0){
-                threadNum = 5;
+                threadNum = 6;
             }
             threads_.resize(threadNum);
 
-            for(int idx = 0;idx < threadNum; idx++)
+            for(size_t idx = 0;idx < threadNum; idx++)
             {
                 
                 if(pthread_create(&threads_[idx], NULL, ThreadPool_WorkerFunc, (void*)(0)) != 0)
@@ -56,11 +56,21 @@ namespace httpServer{
         return NULL;
     }
     
+    /*
     template<class T>
     void ThreadPool::ThreadPool_AddTask(T&& task){
         pthread_mutex_lock(&Mutex_);
         {
             tasks_.emplace(std::forward<T>(task));
+        }
+        pthread_mutex_unlock(&Mutex_);
+        pthread_cond_signal(&Cv_);
+    }
+    */
+    void ThreadPool::ThreadPool_AddTask(std::function<void()> task){
+        pthread_mutex_lock(&Mutex_);
+        {
+            tasks_.push(task);
         }
         pthread_mutex_unlock(&Mutex_);
         pthread_cond_signal(&Cv_);
@@ -82,7 +92,7 @@ namespace httpServer{
         }
         
         //Free Threads
-        for(int i = 0; i < ThreadNum_; i++){
+        for(size_t i = 0; i < ThreadNum_; i++){
             if(pthread_join(threads_[i], NULL) != 0){
                 perror("Thread Join Error");
                 return -1;

@@ -1,3 +1,6 @@
+#ifndef HTTPREQUEST_H_
+#define HTTPREQUEST_H_
+
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -52,3 +55,5 @@ namespace httpServer
         Map Body_;
     };
 } // namespace httpServer
+
+#endif

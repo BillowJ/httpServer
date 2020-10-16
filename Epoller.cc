@@ -53,7 +53,7 @@ namespace httpServer
 
     bool Epoller::AddFd(int Fd, uint32_t Event){
         if(Fd < 0) return false;
-        struct epoll_event ev;
+        epoll_event ev;
         ev.data.fd = Fd;
         ev.events = Event;
         return 0 == epoll_ctl(EpollFd_, EPOLL_CTL_ADD, Fd, &ev);
