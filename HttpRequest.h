@@ -1,6 +1,7 @@
 #ifndef HTTPREQUEST_H_
 #define HTTPREQUEST_H_
 
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -42,17 +43,20 @@ namespace httpServer
      private:
         bool ParseRequestLine(const std::string&);
         void ParseHeaders(const std::string&);
-        void ParseBody();
+        void ParseBody(const std::string&);
+        void ParsePost();
         void ParsePath();
+
+        int ConvertHex(char);
      private:
         using Map = std::unordered_map<std::string, std::string>;
         static const std::unordered_set<std::string> DEFAULT_HTML;
         // 当前解析状态
         PARSE_STATE ParseState_;
-        std::string Path_, HttpVesion_, Method_;
+        std::string Path_, HttpVesion_, Method_, Body_;
         bool KeepAlive_;
         Map Header_;
-        Map Body_;
+        Map Post_;
     };
 } // namespace httpServer
 

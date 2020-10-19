@@ -29,20 +29,26 @@ bool HttpRequest::Parse(Buffer& buff){
     }
     while (buff.ReadableBytes() && ParseState_ != Parse_Finish)
     {   
+        /* Content\r\n
+         * \r\n
+         * BodyContent\r\n
+         */
         const char* lineEnd = std::search(buff.Peek(), buff.ConstBeginWrite(), CRLF, CRLF+2);
         std::string line(buff.Peek(), lineEnd);
         switch (ParseState_)
         {
         case Parse_Request_Line:
-            ParseRequestLine(line);
+            if(!ParseRequestLine(line)) return false;
+            ParsePath();
             break;
         
         case Parse_Headers:
             ParseHeaders(line);
+            if(buff.ReadableBytes() <= 2) { ParseState_ = Parse_Finish; }       // "\r\n"
             break;
         
         case Parse_Body:
-            ParseBody();
+            ParseBody(line);
             break;
         default:
             break;
@@ -74,7 +80,7 @@ void HttpRequest::ParseHeaders(const std::string& str){
     }
     else
     {
-        ParseState_ = Parse_Body;
+        ParseState_ = Parse_Body;       // "\r\n"
     }
     return;
 }
@@ -92,14 +98,75 @@ void HttpRequest::ParsePath(){
         }
     }
 }
+int HttpRequest::ConvertHex(char ch) {
+    if(ch >= 'A' && ch <= 'F') return ch -'A' + 10;
+    if(ch >= 'a' && ch <= 'f') return ch -'a' + 10;
+    return ch;
+}
+void HttpRequest::ParsePost(){
+    int i = 0, j = 0;
+    int size = Body_.size();
+    std::string curKey("");
+    std::string curVal("");
+    int num = 0;
+    for(; i < size; i++){
+        char ch = Body_[i];
+        // Encoding-Type: Percent-encoding -> https://developer.mozilla.org/zh-CN/docs/Glossary/percent-encoding
+        switch(ch){
+        case '=':
+            curKey = Body_.substr(j, i - j);
+            j = i + 1;
+            break;
+        case '&':
+            curVal = Body_.substr(j, i - j);
+            j = i + 1;
+            Post_[curKey] = curVal;
+            break;
+        case '%':
+            num = ConvertHex(Body_[i + 1]) * 16 + ConvertHex(Body_[i + 2]);
+            Body_[i + 2] = num % 10 + '0';
+            Body_[i + 1] = num / 10 + '0';
+            i += 2;
+            break;
+        case '+':
+            curVal = ' ';
+        default:
+            break;
+        }
+    }
+    //last key-val
+    assert(j <= i);
+    if(Post_.count(curKey) == 0 && j < i) {
+        curVal = Body_.substr(j, i - j);
+        Post_[curKey] = curVal;
+    }
+}
 
-void HttpRequest::ParseBody(){
+void HttpRequest::ParseBody(const std::string& line){
     if(Method_ == "GET"){
+        std::cout << "Method:GET\n";
         ParsePath();
-        ParseState_ = Parse_Finish;
     }
-    else if(Method_ == "POST"){
+    else if(Method_ == "POST" && Header_["Content-Type"] == "application/x-www-form-urlencoded"){
         //...
+        std::cout << "Method:POST\n";
+        Body_ = line;
+        ParsePost();
     }
+    // TODO : parse application/json, multipart/form-data, text/xml 
+    // else if(Method_ == "POST" && Header_["Content-Type"] == "text/plaint"){
+    //     Body_ = line;
+    // }
+    
+    // POST PARSE TEST:
+    if(!Post_.empty()){
+        for(auto& item : Post_){
+            std::cout << "key: " << item.first;
+            std::cout << " ";
+            std::cout << "val: " << item.second;
+            std::cout << std::endl;
+        }
+    }
+    std::cout << "Parse Finish" << std::endl;
     ParseState_ = Parse_Finish;
 }
