@@ -70,10 +70,12 @@ namespace httpServer{
     void ThreadPool::ThreadPool_AddTask(std::function<void()> task){
         pthread_mutex_lock(&Mutex_);
         {
-            tasks_.push(task);
+            // 减少copy
+            tasks_.push(std::move(task));
         }
-        pthread_mutex_unlock(&Mutex_);
+        
         pthread_cond_signal(&Cv_);
+        pthread_mutex_unlock(&Mutex_);
     }
 
     int ThreadPool::ThreadPool_Destroy(){

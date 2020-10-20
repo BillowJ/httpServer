@@ -49,7 +49,7 @@ namespace httpServer
         static void ThreadPool_AddTask(std::function<void()>);
 
         static int  ThreadPool_Destroy();
-        static bool ThreadPool_Create(size_t threadNum = 3);
+        static bool ThreadPool_Create(size_t threadNum = 5);
     };
 
 } // namespace httpServer

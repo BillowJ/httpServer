@@ -137,7 +137,8 @@ namespace httpServer
 
     void Server::AddClient(int fd, struct sockaddr_in& addr){
         assert(fd > 0);
-        Users_[fd].Init(fd, addr);
+        // 若有业务层提供的相应函数 直接传入进行初始化
+        Users_[fd].Init(fd, addr, PostParserHandler_, CallBacks_);
         // TODO : add timer
         ::SetNonBlocking(fd);
         Epoller_ -> AddFd(fd, (EPOLLIN | connEvent_));
@@ -216,6 +217,35 @@ namespace httpServer
         }
     }
 
+    bool Server::ResigterHandler(const string& key, std::function<void(void*)> callback ){
+        if(key.empty()) return false;
+        
+        // Key的格式化
+        string ans;
+        for(size_t i = 0; i < key.size(); i++){
+            char ch = key[i];
+            int ascii = (int)(ch);
+            ans = ans + "%" + std::to_string(ascii);
+        }
 
+        CallBacks_[ans] = callback;
+        
+        // 分发至现有的连接
+        for(auto& item : Users_){
+            auto singleConn = item.second;
+            singleConn.SetCallBack(ans, callback);
+        }
 
+        return true;
+    }
+
+    bool Server::SetPostParseHandler(const std::function<string(void*)>& callback){
+        PostParserHandler_ = callback;
+        
+        // 更新现有的连接
+        for(auto& item : Users_){
+            auto singleConn = item.second;
+            singleConn.SetPostHandler(PostParserHandler_);
+        }
+    }
 } // namespace httpServer

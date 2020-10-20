@@ -2,6 +2,7 @@
 #define HTTPCONN_H_
 #include <string>
 #include <unistd.h> //close
+#include <queue>
 #include <arpa/inet.h>
 #include "Buffer.h"
 #include "HttpRequest.h"
@@ -9,14 +10,15 @@
 
 namespace httpServer
 {
-
+    /* 负责生成Response和接受Request及其客户端的IO处理逻辑*/
     class HttpConn{
     public:
         HttpConn();
         HttpConn(int fd, const struct sockaddr_in& addr);
         ~HttpConn();
 
-        void Init(int fd, const sockaddr_in& addr);
+        void Init(int fd, const sockaddr_in& addr, std::function<std::string(void*)>,
+                  const std::unordered_map<string, std::function<void(void*)>>& );
         void Close();
         bool Process();
 
@@ -30,6 +32,15 @@ namespace httpServer
         const char* GetIp() const;
         struct sockaddr_in GetAddr() const;
 
+        void SetCallBack(const std::string& key, std::function<void(void*)> callback)
+        {
+            CallBacks_[key] = callback;
+        }
+
+        void SetPostHandler(const std::function<std::string(void*)>& postHandler){
+            this -> PostHandler_ = postHandler;
+        }
+
     public:
         static const char* SrcDir_;
         static std::atomic<int> UserCount;
@@ -42,12 +53,22 @@ namespace httpServer
 
         struct sockaddr_in addr_;
         struct iovec Iov_[2];
+        
+        //GET的Key和回调的映射
+        std::unordered_map<string, std::function<void(void*)>> CallBacks_;
+
+        // POST的响应处理函数
+        std::function<std::string(void*)> PostHandler_;
+
+
 
         HttpRequest req_;
         HttpResponse rsp_;
 
         Buffer rBuffer_;
         Buffer wBuffer_;
+
+        std::queue<std::function<void()>> tasks_;
         
     };
 } // namespace httpServer

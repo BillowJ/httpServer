@@ -12,10 +12,12 @@ namespace httpServer
 {
     class Server{
      public:
-      //   Server(int Port, int TrigerMode);
+      // Server(int Port, int TrigerMode);
         Server(int Port, int Threads);
         ~Server();
         void Start();
+        bool ResigterHandler(const std::string& key, std::function<void(void*)>);   // GET响应的注册及其分发接口
+        bool SetPostParseHandler(const std::function<string(void*)>&);              // POST响应的注册及其分发接口
 
      private:
         bool InitSocket();
@@ -43,7 +45,9 @@ namespace httpServer
         static const int MaxFd_ = 65535;
         std::unique_ptr<Epoller> Epoller_;
         std::unordered_map<int , HttpConn> Users_;
-     // std::unique_ptr<ThreadPool> ThreadPool_;
+        
+        std::unordered_map<std::string, std::function<void(void*)>> CallBacks_;  // 服务器Key和回调的映射
+        std::function<std::string(void*)> PostParserHandler_;                    // POST的响应函数
     };
 
 } // namespace httpServer

@@ -49,6 +49,7 @@ bool HttpRequest::Parse(Buffer& buff){
         
         case Parse_Body:
             ParseBody(line);
+            if(buff.ReadableBytes() <= 2) { ParseState_ = Parse_Finish; }
             break;
         default:
             break;
@@ -58,13 +59,73 @@ bool HttpRequest::Parse(Buffer& buff){
     return true;
 }
 
+void HttpRequest::ParseRequestLineWithParameter(std::string str){
+    std::string::size_type n = str.find("?");
+    // GET without parameter
+    if(n == std::string::npos){
+        Path_ = str;
+        return;
+    }
+    else
+    {
+        Path_ = str.substr(0, n);
+        
+        size_t i = n;
+        size_t j = n;
+        int num = 0;
+        size_t curSize = str.size();
+        std::string curKey("");
+        std::string curVal("");
+        //Decode ParseLine.
+        for(size_t i = n, j = n; i < curSize; i++){
+            char ch = str[i];
+            switch (ch)
+            {
+            case '=':
+                curKey = str.substr(j, i-j);
+                j = i + 1;
+                break;
+
+            case '&':
+                curVal = str.substr(j, i-j);
+                j = i+1;
+                if(curVal == "") curVal = "default";
+                Keys_[curKey] = curVal;
+                break;
+
+            case '%':
+                // 将16进制转换成10进制的ASCII码,到时候注册的时候只需匹配相应的ASCII码确定Key
+                num = ConvertHex(str[i + 1]) * 16 + ConvertHex(str[i + 2]);
+                str[i + 2] = num % 10 + '0';
+                str[i + 1] = num / 10 + '0';
+                i += 2;
+                break;
+
+            case '+':
+                curVal = ' ';
+                break;
+
+            default:
+                break;
+            }
+        }
+        assert(j <= i);
+        if(j <= i && Keys_.count(curKey) == 0){
+            curVal = str.substr(j, i - j);
+            if(curVal == "") curVal = "default";
+            Keys_[curKey] = curVal;
+        }
+    }
+    
+}
+
 bool HttpRequest::ParseRequestLine(const std::string& str){
     bool succed = false;
     std::regex patten("^([^ ]*) ([^ ]*) HTTP/([^ ]*)$");
     std::smatch subMatch;
     if(std::regex_match(str, subMatch, patten)) {
         Method_ = subMatch[1];
-        Path_ = subMatch[2];
+        ParseRequestLineWithParameter(subMatch[2]);
         HttpVesion_ = subMatch[3];
         ParseState_ = Parse_Headers;
         succed = true;
@@ -98,11 +159,34 @@ void HttpRequest::ParsePath(){
         }
     }
 }
+
 int HttpRequest::ConvertHex(char ch) {
     if(ch >= 'A' && ch <= 'F') return ch -'A' + 10;
     if(ch >= 'a' && ch <= 'f') return ch -'a' + 10;
     return ch;
 }
+
+
+void HttpRequest::ParseBody(const std::string& line){
+    if(line.empty()) ParseState_ = Parse_Finish;
+
+    if(Method_ == "GET"){
+        std::cout << "Method:GET\n";
+        ParsePath();
+    }
+    else if(Method_ == "POST" && Header_["Content-Type"] == "application/x-www-form-urlencoded"){
+        std::cout << "Method:POST\n";
+        // 仅保存Body的数据
+        Body_ += line;
+    }
+
+    std::cout << "Parse Finish" << std::endl;
+    ParseState_ = Parse_Finish;
+}
+
+
+// POST 交给业务层提供函数进行解析 不进行自我解析
+/*
 void HttpRequest::ParsePost(){
     int i = 0, j = 0;
     int size = Body_.size();
@@ -141,32 +225,4 @@ void HttpRequest::ParsePost(){
         Post_[curKey] = curVal;
     }
 }
-
-void HttpRequest::ParseBody(const std::string& line){
-    if(Method_ == "GET"){
-        std::cout << "Method:GET\n";
-        ParsePath();
-    }
-    else if(Method_ == "POST" && Header_["Content-Type"] == "application/x-www-form-urlencoded"){
-        //...
-        std::cout << "Method:POST\n";
-        Body_ = line;
-        ParsePost();
-    }
-    // TODO : parse application/json, multipart/form-data, text/xml 
-    // else if(Method_ == "POST" && Header_["Content-Type"] == "text/plaint"){
-    //     Body_ = line;
-    // }
-    
-    // POST PARSE TEST:
-    if(!Post_.empty()){
-        for(auto& item : Post_){
-            std::cout << "key: " << item.first;
-            std::cout << " ";
-            std::cout << "val: " << item.second;
-            std::cout << std::endl;
-        }
-    }
-    std::cout << "Parse Finish" << std::endl;
-    ParseState_ = Parse_Finish;
-}
+*/

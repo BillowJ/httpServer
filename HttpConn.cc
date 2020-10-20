@@ -21,7 +21,9 @@ namespace httpServer
         this -> Close();
     }
 
-    void HttpConn::Init(int fd, const sockaddr_in& addr){
+    void HttpConn::Init(int fd, const sockaddr_in& addr,
+    std::function<std::string(void*)> postHandler,
+    const std::unordered_map<string, std::function<void(void*)>>& callBacks){
         assert(fd > 0);
         UserCount++;
         fd_ = fd;
@@ -29,6 +31,8 @@ namespace httpServer
         wBuffer_.RetrieveAll();
         rBuffer_.RetrieveAll();
         isClose = false;
+        PostHandler_ = postHandler;
+        CallBacks_ = callBacks;
     }
 
     void HttpConn::Close(){
@@ -104,11 +108,28 @@ namespace httpServer
     }
 
     bool HttpConn::Process(){
-        // TODO: 初始化request 读取rBuffer解析request 
-        // TODO: 构造response到wBuffer
         if(rBuffer_.ReadableBytes() == 0 ){ return false; }
         req_.Init();
         if(req_.Parse(rBuffer_)){
+            // 是否调用对应的回调函数 从下层request对象获取Key进行匹配
+            if(req_.Method() == "GET"){
+                for(auto& item : req_.GetKeys())
+                {
+                    if(CallBacks_.count(item.first) == 1){
+                        auto CallFunc = CallBacks_[item.first];
+                        CallFunc((void*)&item.second);
+                    }
+                }
+            }
+            else if(req_.Method() == "POST"){
+                if(PostHandler_){
+                    // 将body传入到业务层提供的解析函数中
+                    // 疑惑: 解析完应该返回什么数据？
+                    std::string ans = PostHandler_((void*)&req_.GetPostBody());
+                }
+            }
+            //TODO : 判断是否业务层已经对其进行过处理，若有则更改response的生成策略
+
             rsp_.InitResponse(SrcDir_, req_.Path(), req_.IsKeepAlive(), 200);
         }
         else{
