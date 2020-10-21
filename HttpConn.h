@@ -18,7 +18,7 @@ namespace httpServer
         ~HttpConn();
 
         void Init(int fd, const sockaddr_in& addr, std::function<std::string(void*)>,
-                  const std::unordered_map<string, std::function<void(void*)>>& );
+                  const std::unordered_map<string, std::function<void(void*)>>&, int);
         void Close();
         bool Process();
 
@@ -30,6 +30,7 @@ namespace httpServer
         int GetFd() const;
         int GetPort() const;
         const char* GetIp() const;
+        size_t GetThreadIdx() const { return BindThreadIdx_; }
         struct sockaddr_in GetAddr() const;
 
         void SetCallBack(const std::string& key, std::function<void(void*)> callback)
@@ -45,12 +46,12 @@ namespace httpServer
         static const char* SrcDir_;
         static std::atomic<int> UserCount;
         static std::string FilePath;
-    
+        
     private:
         int fd_;
         int IovCnt_;
         bool isClose;
-
+        
         struct sockaddr_in addr_;
         struct iovec Iov_[2];
         
@@ -60,15 +61,14 @@ namespace httpServer
         // POST的响应处理函数
         std::function<std::string(void*)> PostHandler_;
 
-
+        // 每个客户端的所有请求都由一个线程完成，避免线程之间的竞争。
+        size_t BindThreadIdx_;
 
         HttpRequest req_;
         HttpResponse rsp_;
 
         Buffer rBuffer_;
         Buffer wBuffer_;
-
-        std::queue<std::function<void()>> tasks_;
         
     };
 } // namespace httpServer

@@ -181,6 +181,7 @@ void HttpRequest::ParseBody(const std::string& line){
     }
 
     std::cout << "Parse Finish" << std::endl;
+    std::cout << "Path_: " << Path_ << std::endl;
     ParseState_ = Parse_Finish;
 }
 

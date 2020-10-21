@@ -1,5 +1,7 @@
 #include "HttpConn.h"
 
+#include <time.h>
+#include <cstdlib>
 
 namespace httpServer
 {
@@ -23,7 +25,7 @@ namespace httpServer
 
     void HttpConn::Init(int fd, const sockaddr_in& addr,
     std::function<std::string(void*)> postHandler,
-    const std::unordered_map<string, std::function<void(void*)>>& callBacks){
+    const std::unordered_map<string, std::function<void(void*)>>& callBacks,int ThreadNum){
         assert(fd > 0);
         UserCount++;
         fd_ = fd;
@@ -33,6 +35,11 @@ namespace httpServer
         isClose = false;
         PostHandler_ = postHandler;
         CallBacks_ = callBacks;
+
+        {
+            std::srand(std::time(0));
+            BindThreadIdx_ = (rand() % ThreadNum);
+        }
     }
 
     void HttpConn::Close(){
@@ -113,13 +120,18 @@ namespace httpServer
         if(req_.Parse(rBuffer_)){
             // 是否调用对应的回调函数 从下层request对象获取Key进行匹配
             if(req_.Method() == "GET"){
-                for(auto& item : req_.GetKeys())
-                {
-                    if(CallBacks_.count(item.first) == 1){
-                        auto CallFunc = CallBacks_[item.first];
-                        CallFunc((void*)&item.second);
+                std::unordered_map<string, string> mp = req_.GetKeys();
+                if(!mp.empty()){
+                    std::cout << "mp is not empty." << std::endl;
+                    for(auto& item : mp){
+                    //key: item.first val: item.second
+                        if(CallBacks_.count(item.first) == 1){
+                            auto CallFunc = CallBacks_[item.first];
+                            CallFunc((void*)(&item.second));
+                        }
                     }
                 }
+                
             }
             else if(req_.Method() == "POST"){
                 if(PostHandler_){

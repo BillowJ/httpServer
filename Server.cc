@@ -11,6 +11,7 @@ namespace httpServer
             HttpConn::UserCount = 0;
             HttpConn::SrcDir_ = SrcDir_;
             ThreadPool::ThreadPool_Create(ThreadNum);
+            ThreadNum_ = ThreadNum;
             InitEvenMode();
             if(!InitSocket()) { printf("error!\n"); isStart_ = false;}
         }
@@ -138,7 +139,7 @@ namespace httpServer
     void Server::AddClient(int fd, struct sockaddr_in& addr){
         assert(fd > 0);
         // 若有业务层提供的相应函数 直接传入进行初始化
-        Users_[fd].Init(fd, addr, PostParserHandler_, CallBacks_);
+        Users_[fd].Init(fd, addr, PostParserHandler_, CallBacks_, ThreadNum_);
         // TODO : add timer
         ::SetNonBlocking(fd);
         Epoller_ -> AddFd(fd, (EPOLLIN | connEvent_));
@@ -163,12 +164,12 @@ namespace httpServer
 
     void Server::HandleRead(HttpConn* client){
         assert(client);
-        ThreadPool::ThreadPool_AddTask(std::bind(&Server::OnRead, this, client));
+        ThreadPool::ThreadPool_AddTask(std::bind(&Server::OnRead, this, client), client);
     }
 
     void Server::HandleWrite(HttpConn* client){
         assert(client);
-        ThreadPool::ThreadPool_AddTask(std::bind(&Server::OnWrite, this, client));   
+        ThreadPool::ThreadPool_AddTask(std::bind(&Server::OnWrite, this, client), client);   
     }
 
     void Server::CloseConn(HttpConn* client){

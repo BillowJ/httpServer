@@ -37,6 +37,7 @@ namespace httpServer
         char* SrcDir_;
         int ListenPort_;
         int ListenFd_;
+        int ThreadNum_;
         bool isStart_;
         bool OpenLinger_;
 
